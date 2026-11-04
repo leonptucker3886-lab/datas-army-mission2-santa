@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milestones & Work Anniversaries</title>
+<style>
+:root{--brand:#2A78D6}body{font-family:system-ui,sans-serif;margin:0;background:#FAFAF9;color:#18181B}
+header{background:var(--brand);color:#fff;padding:14px 20px}header h1{margin:0;font-size:20px}header a{color:#fff;font-size:13px}
+main{max-width:1000px;margin:auto;padding:16px}section{background:#fff;border:1px solid #DEDDD8;border-radius:8px;padding:14px;overflow-x:auto}
+table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #DEDDD8;padding:6px;text-align:left;font-size:14px;vertical-align:top}
+tr.soon td{background:#FFF7E6}button{background:var(--brand);color:#fff;border:0;border-radius:6px;padding:7px 12px;cursor:pointer;margin:2px}
+.st{min-width:70px}.st.todo{background:#888}.st.ordered{background:#C77700}.st.given{background:#008300}input,select{padding:6px;margin:2px}
+</style></head><body>
+<header><h1 id="title">Milestones & Work Anniversaries</h1><a href="index.html">Back to Secret Santa</a></header>
+<main><section>
+<label>Next <select id="mDays"><option>7</option><option>30</option><option>60</option><option>90</option><option>365</option></select> days</label>
+<select id="mDept"></select>
+<label>Base gift budget $<input id="mBudget" type="number" min="0" style="width:80px"></label>
+<button onclick="mExportCsv()">Export CSV</button><button onclick="mExportIcs()">Add to calendar (.ics)</button>
+<p id="mCount"></p><table id="mList"></table>
+<p style="font-size:12px">Uses the people from the Secret Santa app. Click a status to cycle todo, ordered, given. Rows within 7 days are highlighted.</p>
+</section></main>
+<script src="milestones.js"></script>
+</body></html>
