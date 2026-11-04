@@ -1,8 +1,9 @@
 // ---- Pure logic (testable in Node) ----
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function normDept(d){return String(d??'').trim().replace(/\s+/g,' ').toLowerCase()}
 function makeBlocker(rules){const b=new Set(),k=(a,c)=>a.trim().toLowerCase()+'>'+c.trim().toLowerCase();
   ((rules.ex||'')+'\n'+(rules.last||'')).split('\n').forEach(l=>{let m=l.split('=');if(m.length==2){b.add(k(m[0],m[1]));b.add(k(m[1],m[0]));return}m=l.split('>');if(m.length==2)b.add(k(m[0],m[1]))});
-  return (g,r)=>g.name===r.name||b.has(k(g.name,r.name))||(!!rules.dept&&!!g.dept&&g.dept.toLowerCase()===(r.dept||'').toLowerCase())}
+  return (g,r)=>g.name===r.name||b.has(k(g.name,r.name))||(!!rules.dept&&normDept(g.dept)!==''&&normDept(g.dept)===normDept(r.dept))}
 function assignPairs(people,rules){if(people.length<2)return null;const bad=makeBlocker(rules);
   for(let t=0;t<50;t++){const givers=shuffle([...people]),used=new Set(),out=[];let steps=0;
     const bt=i=>{if(++steps>200000)return false;if(i===givers.length)return true;
@@ -21,7 +22,7 @@ function upcoming(people,days,budget,today){today=today||new Date();today=new Da
   people.forEach(p=>{if(p.start){const x=next(p.start);if(x){const yrs=x.n.getFullYear()-x.orig.getFullYear(),dd=Math.round((x.n-today)/864e5);if(yrs>0&&dd<=days)res.push({p,label:yrs+'-year work anniversary',date:x.n,days:dd,gifts:giftIdeas(p,'anniversary',yrs,budget)})}}
     if(p.bday){const x=next(p.bday);if(x){const dd=Math.round((x.n-today)/864e5);if(dd<=days)res.push({p,label:'Birthday',date:x.n,days:dd,gifts:giftIdeas(p,'birthday',0,budget)})}}});
   return res.sort((a,b)=>a.days-b.days)}
-if(typeof module!=='undefined')module.exports={assignPairs,upcoming,giftIdeas};
+if(typeof module!=='undefined')module.exports={assignPairs,upcoming,giftIdeas,normDept};
 // ---- UI ----
 if(typeof document!=='undefined'){
 const S=JSON.parse(localStorage.getItem('ssm')||'null')||{people:[],rules:{budget:30,date:'',dept:false,ex:'',last:''},brand:{name:'',color:'#2A78D6'},pairs:[]};
@@ -37,16 +38,18 @@ window.loadDemo=()=>{const now=new Date(),y=now.getFullYear(),m=now.getMonth()+1
   S.people=[{name:'Ava',dept:'Sales',email:'ava@example.com',start:d(5,m2,2),bday:d(30,m2,3),likes:'coffee,books'},{name:'Ben',dept:'Sales',email:'ben@example.com',start:d(1,m2,10),bday:d(28,m,28),likes:'gaming'},{name:'Cara',dept:'Ops',email:'cara@example.com',start:d(10,m,28),bday:d(40,1,1),likes:'gardening,tea'},{name:'Dev',dept:'Ops',email:'dev@example.com',start:d(3,6,1),bday:d(35,m2,15),likes:'running'},{name:'Eli',dept:'Support',email:'eli@example.com',start:d(2,m2,5),bday:d(26,8,8),likes:'cooking'},{name:'Fay',dept:'Support',email:'fay@example.com',start:d(0,1,15),bday:d(33,m2,20),likes:'music,travel'}];
   S.rules={budget:30,date:'',dept:true,ex:'Ava = Ben',last:'Cara > Dev'};S.pairs=[];save();renderPeople();loadRules()};
 function loadRules(){$('rBudget').value=S.rules.budget;$('rDate').value=S.rules.date;$('rDept').checked=S.rules.dept;$('rEx').value=S.rules.ex;$('rLast').value=S.rules.last;renderPairs()}
-window.saveRules=()=>{S.rules={budget:+$('rBudget').value||0,date:$('rDate').value,dept:$('rDept').checked,ex:$('rEx').value,last:$('rLast').value};save()};
+window.saveRules=()=>{S.rules={budget:+$('rBudget').value||0,date:$('rDate').value,dept:!!$('rDept').checked,ex:$('rEx').value,last:$('rLast').value};save()};
 window.assign=()=>{if(S.people.length<2){$('sMsg').innerHTML='<span class="err">Add at least 2 people.</span>';return}
   const r=assignPairs(S.people,S.rules);S.pairs=r||[];save();renderPairs();
   $('sMsg').innerHTML=r?`<span class="ok">Assigned all ${r.length} people. Budget $${S.rules.budget}${S.rules.date?', exchange on '+S.rules.date:''}.</span>`:'<span class="err">No valid assignment with these rules. Loosen a rule and try again.</span>'};
-function renderPairs(){$('sTable').innerHTML=S.pairs.length?'<tr><th>Giver</th><th>Gives to</th><th>Receiver interests</th></tr>'+S.pairs.map(([g,r])=>`<tr><td>${esc(g)}</td><td>${esc(r)}</td><td>${esc((S.people.find(p=>p.name===r)||{}).likes)}</td></tr>`).join(''):''}
+function renderPairs(){$('sTable').innerHTML=S.pairs.length?'<tr><th>Giver</th><th>Gives to</th><th>Receiver interests</th></tr>'+S.pairs.map(([g,r])=>{const dp=n=>(S.people.find(p=>p.name===n)||{}).dept;return [g,r,dp]}).map(([g,r,dp])=>`<tr><td>${esc(g)}${dp(g)?' ('+esc(dp(g))+')':''}</td><td>${esc(r)}${dp(r)?' ('+esc(dp(r))+')':''}</td><td>${esc((S.people.find(p=>p.name===r)||{}).likes)}</td></tr>`).join(''):''}
 window.exportPairs=()=>{if(!S.pairs.length)return alert('Assign first');const rows=[['giver','giver_email','receiver','budget','date']].concat(S.pairs.map(([g,r])=>[g,(S.people.find(p=>p.name===g)||{}).email||'',r,S.rules.budget,S.rules.date]));
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));a.download='secret-santa.csv';a.click()};
 window.renderMiles=()=>{const L=upcoming(S.people,+$('mDays').value,+$('mBudget').value||50);
   $('mTable').innerHTML=L.length?'<tr><th>Date</th><th>In</th><th>Who</th><th>Milestone</th><th>Gift ideas</th></tr>'+L.map(x=>`<tr><td>${x.date.toDateString()}</td><td>${x.days} days</td><td>${esc(x.p.name)}</td><td>${esc(x.label)}</td><td>${x.gifts.map(esc).join('<br>')}</td></tr>`).join(''):'<tr><td>No milestones in this window.</td></tr>'};
 function applyBrand(){document.documentElement.style.setProperty('--brand',S.brand.color||'#2A78D6');$('title').textContent=(S.brand.name?S.brand.name+' · ':'')+'Secret Santa & Milestones';$('bName').value=S.brand.name;$('bColor').value=S.brand.color||'#2A78D6'}
 window.saveBrand=()=>{S.brand={name:$('bName').value.trim(),color:$('bColor').value};save();applyBrand()};
+$('bColor').addEventListener('input',()=>{S.brand.color=$('bColor').value;save();applyBrand()});
+$('rDept').addEventListener('change',()=>saveRules());
 renderPeople();loadRules();applyBrand();
 }
